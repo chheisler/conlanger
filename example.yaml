@@ -1,0 +1,141 @@
+# random word generation
+start: initial
+boundaries:
+  - initial
+  - boundary
+syllables:
+  - [1, 0.10]
+  - [2, 0.77]
+  - [3, 0.13]
+states:
+  initial:
+    onset:
+      - [null, 0.90]
+    nucleus:
+      - [null, 0.10]
+  onset:
+    liquid-medial:
+      - [m, 0.07]
+      - [n, 0.14]
+      - [p, 0.04]
+      - [t, 0.13]
+      - [k, 0.06]
+      - [q, 0.03]
+      - [b, 0.04]
+      - [d, 0.09]
+      - [g, 0.02]
+      - [s, 0.10]
+      - [x, 0.04]
+    onglide:
+      - [r, 0.10]
+      - [l, 0.08]
+    nucleus:
+      - [w, 0.03]
+      - [j, 0.03]
+  liquid-medial:
+    onglide:
+      - [null, 0.86]
+    nucleus:
+      - [r, 0.07]
+      - [l, 0.07]
+  onglide:
+    nucleus:
+      - [j, 0.07]
+      - [w, 0.07]
+      - [null, 0.86]
+  nucleus:
+    offglide:
+      - [a, 0.40]
+    length:
+      - [i, 0.30]
+      - [u, 0.30]
+  offglide:
+    coda:
+      - [j, 0.07]
+      - [w, 0.07]
+    length:
+      - [null, 0.86]
+  length:
+    coda:
+      - ["ː", 0.20]
+      - [null, 0.80]
+  coda:
+    boundary:
+      - [m, 0.03]
+      - [n, 0.07]
+      - [s, 0.05]
+      - [x, 0.02]
+      - [p, 0.02]
+      - [t, 0.06]
+      - [k, 0.03]
+      - [q, 0.01]
+      - [b, 0.03]
+      - [d, 0.03]
+      - [g, 0.01]
+      - [r, 0.05]
+      - [l, 0.04]
+      - [null, 0.53]
+  boundary:
+    onset:
+      - [null, 1.00]
+
+# word changes
+changes:
+  -
+    name: glide deletion
+    steps:
+      - [{w: null}, "[mpb]", "[aiu]"]
+      - [{j: null}, "[\\^mnptkqbdgsxrl]", i]
+      - [{w: null}, "[\\^mnptkqbdgsxrl]", u]
+  -
+    name: lengthening
+    steps:
+      - [{aː: ā, iː: ī, uː: ū}, null, null]
+  -
+    name: stress
+    steps:
+      - [{a: á}, null, "[jw][mnptkqbdgsxrl]?$"]
+      - [{a: á, ā: â, i: í, ī: î, u: ú}, null, "[mnptkqbdgsxrljw]+[aiueo][mnptkqbdgsxrl]?$"]
+  -
+    name: stop assimilation
+    steps:
+      - [{n: m}, null, "[mpb]"]
+      - [{t: p, d: b}, null, "[pb]"]
+      - [{n: ŋ, t: k, d: g, q: k}, null, "[kg]"]
+      - [{n: ɴ, t: q, d: ɢ, k: q, g: ɢ, x: χ}, null, q]
+  -
+    name: voice assimilation
+    steps:
+    - [{p: b, t: d, k: g}, null, "[bdg]"]
+    - [{b: p, d: t, g: k}, null, "[ptkqsx]"]
+  - 
+    name: vowel lowering
+    steps:
+      - [{i: e, ī: ē, u: o, ū: ō}, null, "[ɴqɢχ]"]
+  -
+    name: dental assimilation
+    steps:
+      - [{tl: ɬ, dl: l}, "[mnptkqbdgsxrl]", "[aiueoāīūēō]"]
+  -
+    name: glottalization
+    steps:
+      - [{p: h}, "[^m]", null]
+      - [{q: ʔ}, null, null]
+  -
+    name: palatalization
+    steps:
+      - [{kk: t͡ʃt͡ʃ, k: t͡ʃ, gg: d͡ʒd͡ʒ, g: d͡ʒ, xx: ʃʃ, x: ʃ}, null, "[ji]"]
+      - [{j: null}, "[ʃʒ]", null]
+  -
+    name: lenition
+    steps:
+      - [{b: v, d: ð, g: ɣ}, "[rljwaiueoāīūēō]", "[rljwaiueoāīūēō]"]
+      - [{p: b, t: d, t͡ʃ: d͡ʒ, k: g, ʔ: ɢ, s: z, ʃ: ʒ, x: ɣ, h: ɦ}, "[mnŋɴbdgɢrljwaiueoāīūēō]", "[mnŋɴbdgɢrljwaiueoāīūēō]"]
+      - [{tt: t, kk: k, ʔʔ: ʔ, ss: s, xx: x}, null, null]
+      - [{ɢ: ː, ɦ: ː}, "[aiueoāīūēōjw]", "[^aiueoāīūēōjw]"]
+      - [{ɢ: null, ɦ: null}, "[aiueoāīūēōjw]", "[aiueoāīūēōjw]"]
+  -
+    name: vowel shift
+    steps:
+      - [{i: e, u: o, a: ə}, null, null]
+      - [{ī: i, ū: u, ā: a, ē: e, ō: o}, null, null]
