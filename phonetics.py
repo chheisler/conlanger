@@ -14,7 +14,8 @@ class PhoneticsEngine(object):
         with open(filename, 'rb') as file:
             config = yaml.load(file)
         self._segments = set()
-        self._classes = defaultdict(set)
+        self._classes = dict(set)
+        stack = []
         for segment, features in config['segments'].items():
             self._segments.add(segment)
             for feature in features:
