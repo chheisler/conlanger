@@ -1,9 +1,9 @@
 segments:
-  m: [voiced, labial, nasal, stop]
+  m: [voiced, bilabial, nasal, stop]
   n: [voiced, alveolar, nasal, stop]
   ŋ: [voiced, velar, nasal, stop]
   ɴ: [voiced, uvular, nasal, stop]
-  p: [voiceless, labial, stop]
+  p: [voiceless, bilabial, stop]
   t: [voiceless, alveolar, stop]
   k: [voiceless, velar, stop]
   q: [voiceless, uvular, stop]
@@ -37,9 +37,9 @@ segments:
   o: [voiced, mid, back, unrounded, vowel]
   a: [voiced, open, central, unrounded, vowel]
 
-voiced:
+voiced: null
 consonant:
-
+  fricative: [f, θ, s, ʃ, x, h]
 vowel:
   close: [i, u]
   mid: [e, o]

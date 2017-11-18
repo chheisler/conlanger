@@ -1,6 +1,12 @@
 from collections import defaultdict
 import yaml
 import regex as re
+import operator
+
+
+def _set_regex(*args):
+    return r'(?:{0})'.format('|'.join(args))
+
 
 class PhoneticsEngine(object):
 
@@ -13,23 +19,7 @@ class PhoneticsEngine(object):
             self._segments.add(segment)
             for feature in features:
                 self._classes[feature].add(segment)
-
-
-    # tokens for writing operations
-    FEATURE = r'[\w-]+'
-    AND = '+'
-    NOT = r'-'
-    OR = '|'
-    LEFT_BRACKET = '('
-    RIGHT_BRACKET = ')'
-    PRECEDENCE = {AND: 1, NOT: 1, OR: 0}
-
-
-    def is_operator(self, token):
-        return re.match('^(%s)$' % '|'.join((AND, NOT, OR))) is not None
-
-    def is_feature(self, token):
-        return False
+        self._classes = dict(self._classes)
 
     TARGET = '_'
     BOUNDARY = '#'
@@ -59,70 +49,103 @@ class PhoneticsEngine(object):
         """ Get the pattern for the segment to be replaced. """
         segments = changes.keys()
         segments.sort(key=len, reverse=True)
-        return r'(?:{0})'.format('|'.join(segments))
+        return _set_regex(*segments)
 
 
     def _sub(self, match, changes):
         return changes[match.group(0)]
 
 
-    def _expr(self, expr):
-        tokens = re.findall('(%s)' % '|'.join([SET, AND, NOT, OR, LEFT_BRACKET, RIGHT_BRACKET]))
-        output = [self._segments[theuniversalset]]
-        operators = []
+    # tokens for writing operations
+    CLASS = r'[+-][\w-]+'
+    AND = r','
+    OR = r'|'
+    LEFT_BRACKET = r'['
+    RIGHT_BRACKET = r']'
+    OPERATOR = _set_regex(AND, re.escape(OR))
+    TOKEN = _set_regex(CLASS, AND, re.escape(OR), re.escape(LEFT_BRACKET), re.escape(RIGHT_BRACKET), '.')
+    PRECEDENCE = {AND: 1, OR: 0, LEFT_BRACKET: -1}
+    FUNCTIONS = {AND: operator.__and__, OR: operator.__or__}
+    def parse(self, expr):
+        out = []
+        ops = []
 
         # parse tokens and evaluate segment set
-        for token in tokens:
+        for match in re.finditer(self.TOKEN, expr):
+            token = match.group(0)
 
             # if set name append the set to the stack
-            if is_value(token):
-                try:
-                    output.append(self._classes[token])
-                except KeyError:
-                    raise ExpressionException("invalid feature: '%s'" % token)
+            if re.match(self.CLASS, token):
+                out.append(token)
 
             # if operator apply previous operators if necessary and add to stack
-            elif is_operator(token):
-                while len(operators) > 0 and PRECEDENCE[operators[-1]] >= PRECEDENCE[token]:
-                    output.append(operators.pop())
-                operators.append(token)
+            elif re.match(self.OPERATOR, token):
+                while len(ops) > 0 and self.PRECEDENCE[ops[-1]] >= self.PRECEDENCE[token]:
+                    out.append(ops.pop())
+                ops.append(token)
 
             # if left bracket add to operator stack
             elif token == self.LEFT_BRACKET:
-                operators.append(token)
+                ops.append(token)
 
             # if right bracket apply operators until left bracket 
             elif token == self.RIGHT_BRACKET:
-                while len(operators) > 0 and operators[-1] != LEFT_BRACKET:
-                    _operate(operators.pop(), stack)
-                if len(operators) == 0:
+                while len(ops) > 0 and ops[-1] != self.LEFT_BRACKET:
+                    out.append(ops.pop())
+                if len(ops) == 0:
                     raise ExpressionException("no matching left bracket")
-                operators.pop()
+                ops.pop()
 
             # raise an error on an invalid token
             else:
                 raise ExpressionException("invalid token: '%s'" % token)
         
         # apply any remaining operators
-        while len(operators) > 0:
-            _operate(output, operators)
+        while len(ops) > 0:
+            out.append(ops.pop())
 
-        # return the final result in the output stack
-        return output.pop()
+        # return the parsed output
+        return out
 
 
-    def _operate(self, output, operators):
-        x = output.pop()
-        y = output.pop()
-        operator = operators.pop()
-        if operator == AND:
-            pass
-        elif operator == NOT:
-            pass
-        elif operator == OR:
-            pass
-        else:
-            raise Exception("invalid operator: '%s'" % token)
+    def eval(self, tokens):
+        out = []
+        for token in tokens:
+            if re.match(self.CLASS, token):
+                try:
+                    if token[0] == '+':
+                        print 'om'
+                        out.append(self._classes[token[1:]])
+                    elif token[0] == '-':
+                        out.append(self._segments - self._classes[token[1:]])
+                    else:
+                        raise ExpressionException("invalid token: '%s'" % token)
+                except KeyError:
+                    raise ExpressionException("invalid feature: '%s'" % token)
+
+            elif re.match(self.OPERATOR, token):
+                try:
+                    x = out.pop()
+                    y = out.pop()
+                    out.append(self.FUNCTIONS[token](x, y))
+                except IndexError:
+                    raise Exception("NO")
+
+            else:
+                raise ExpressionException("invalid token: '%s'" % token)
+        return out.pop()
+
+
+    @classmethod
+    def _op(cls, out, ops):
+        x = out.pop()
+        y = out.pop()
+        op = ops.pop()
+        try:
+            fn = FUNCTIONS[op](x, y)
+        except KeyError:
+            raise Exception("invalid")
+
 
 class ExpressionException(Exception):
     pass
