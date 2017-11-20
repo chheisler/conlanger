@@ -5,7 +5,8 @@ import operator
 
 
 def _set_regex(*args):
-    return r'(?:{0})'.format('|'.join(args))
+    """ Build a regex for a set of segments. """
+    return ur'(?:{0})'.format('|'.join(args))
 
 
 class PhoneticsEngine(object):
@@ -19,7 +20,7 @@ class PhoneticsEngine(object):
         """ Load segments from configuration and group  by features. """
 
         stack = [([], config['segments'])]
-        self._segments = set()
+        self._segments = {ur'\b'}
         self._classes = defaultdict(set)
 
         # find all segments and add them to any ancestor feature classes
@@ -45,10 +46,10 @@ class PhoneticsEngine(object):
         self._classes = dict(self._classes)
 
 
-    TARGET = '_'
-    BOUNDARY = '#'
-    EXPRESSION = r'\[(?>[^\[\]]|(?R))*\]'
-    PATTERN = r'{0}\K{1}(?={2})'
+    TARGET = u'_'
+    BOUNDARY = u'#'
+    EXPRESSION = ur'\[(?>[^\[\]]|(?R))*\]'
+    PATTERN = ur'{0}\K{1}(?={2})'
     def app_change(self, word, changes, where):
         prefix, suffix = self._affixes(where)
         target = self._target(changes)
@@ -59,14 +60,17 @@ class PhoneticsEngine(object):
 
     def _affixes(self, where):
         """ Get patterns for conditioning prefix and suffix. """
-        print where, self.TARGET
-        try:
-            return tuple(
-                re.sub(self.EXPRESSION, self._expr, affix)
-                for affix in where.split(self.TARGET)
-            )
-        except ValueError:
-            raise PhoneticsException('no')
+        return tuple(
+             re.sub(self.EXPRESSION, lambda m: self._expr(m), affix)
+             for affix in where.split(self.TARGET)
+        )
+
+
+    def _expr(self, match):
+        """ Replace an expression with a regex matching the set of segments. """
+        tokens = self.parse(match.group(0))
+        segments = self.eval(tokens)
+        return _set_regex(*segments)
 
 
     def _target(self, changes):
