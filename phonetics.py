@@ -20,8 +20,9 @@ class PhoneticsEngine(object):
         """ Load segments from configuration and group  by features. """
 
         stack = [([], config['segments'])]
-        self._segments = {ur'\b'}
-        self._classes = defaultdict(set)
+        self._all = set()
+        self._features = defaultdict(set)
+        self._segments = defaultdict(set)
 
         # find all segments and add them to any ancestor feature classes
         while len(stack) > 0:
@@ -31,8 +32,9 @@ class PhoneticsEngine(object):
             if isinstance(segments, list):
                 for feature in features:
                     for segment in segments:
-                        self._segments.add(segment)
-                        self._classes[feature].add(segment)
+                        self._all.add(segment)
+                        self._segments[feature].add(segment)
+                        self._features[segment].add(feature)
 
             # if value is a dictionary add another stack item for each entry
             elif isinstance(segments, dict):
@@ -43,7 +45,14 @@ class PhoneticsEngine(object):
             else:
                 raise Exception("NO")
 
-        self._classes = dict(self._classes)
+        # set the regex for segment tokens
+        self._segment_regex = _set_regex(*self._all)
+        self._token_regex = re.compile(self.TOKEN_REGEX.format(self._segment_regex))
+
+        # finalize sets
+        self._all.add(ur'\b')
+        self._segments= dict(self._segments)
+        self._features = dict(self._features)
 
 
     TARGET = u'_'
@@ -99,7 +108,7 @@ class PhoneticsEngine(object):
     OPERATORS = {op.token: op for op in (NOT, AND, OR)}
 
     def _not(self, x):
-        return self._segments - x
+        return self._all - x
 
     def _and(self, x, y):
         return x & y
@@ -113,8 +122,7 @@ class PhoneticsEngine(object):
     LEFT_BRACKET = r'\['
     RIGHT_BRACKET = r'\]'
     OPERATOR = _set_regex(*[op.regex for op in OPERATORS.values()])
-    TOKEN = _set_regex(CLASS, OPERATOR, LEFT_BRACKET, RIGHT_BRACKET, '.')
-
+    TOKEN_REGEX = _set_regex(CLASS, LEFT_BRACKET, RIGHT_BRACKET, OPERATOR, '{0}', '.')
 
     def parse(self, expr):
         """ Parse an expression representing a set of segments. """
@@ -123,11 +131,15 @@ class PhoneticsEngine(object):
         ops = []
 
         # parse tokens and evaluate segment set
-        for match in re.finditer(self.TOKEN, expr):
+        for match in self._token_regex.finditer(expr):
             token = match.group(0)
 
             # if set name append the set to the stack
             if re.match(self.CLASS, token):
+                out.append(token)
+
+            # if token is segment append to the stack
+            elif re.match(self._segment_regex, token):
                 out.append(token)
 
             # if operator apply previous operators if necessary and add to stack
@@ -153,7 +165,7 @@ class PhoneticsEngine(object):
 
             # raise an error on an invalid token
             else:
-                raise ExpressionException("invalid token: '%s'" % token)
+                raise ExpressionException("invalid segment: '%s'" % token)
         
         # apply any remaining operators
         while len(ops) > 0:
@@ -169,17 +181,21 @@ class PhoneticsEngine(object):
         out = []
         for token in tokens:
 
-            # if token is value put appropriate segment set on stack
+            # if token is class put appropriate set on stack
             if re.match(self.CLASS, token):
                 try:
                     if token[0] == '+':
-                        out.append(self._classes[token[1:]])
+                        out.append(self._segments[token[1:]])
                     elif token[0] == '-':
-                        out.append(self._segments - self._classes[token[1:]])
+                        out.append(self._all - self._segments[token[1:]])
                     else:
                         raise ExpressionException("invalid token: '%s'" % token)
                 except KeyError:
                     raise ExpressionException("invalid feature: '%s'" % token)
+
+            # if token is segment put set containing it on stack
+            elif re.match(self._segment_regex, token):
+                out.append(set(token))
 
             # if token is operator apply to top of stack
             elif token in self.OPERATORS:
