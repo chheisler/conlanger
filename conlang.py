@@ -59,7 +59,7 @@ class WordGenerator(object):
         phonetics = PhoneticsEngine('phonetics.yaml')
         for rule in change['rules']:
             word = phonetics.sound_change(rule, word)
-        print '{0}: {1}'.format(change['name'], word)
+        print u'{0}: {1}'.format(change['name'], word)
         return word
 
 class StateMachine(object):

@@ -46,11 +46,10 @@ class PhoneticsEngine(object):
                 raise Exception("NO")
 
         # set the regex for segment tokens
-        self._segment_regex = _set_regex(*self._all)
+        self._segment_regex = _set_regex(self.BOUNDARY, *self._all)
         self._token_regex = re.compile(self.TOKEN_REGEX.format(self._segment_regex))
 
         # finalize sets
-        self._all.add(ur'\b')
         self._segments= dict(self._segments)
         self._features = dict(self._features)
 
@@ -64,34 +63,31 @@ class PhoneticsEngine(object):
         # split the rule into the change and condition
         count = rule.count('/')
         if count == 0:
-            print 'foo'
             change = rule
             where = '_'
         elif count == 1:
             change, where = rule.split('/')
         else:
-            print 'bar'
             raise Exception("NO")
 
         # split the change into from and to
         try:
             before, after = change.split('->')
         except ValueError:
-            raise Exception("NO")
+            raise PhoneticsException(u"invalid change expression: '%s'" % change)
         before = self._input_sub(before)
 
         # get patterns for conditioning prefix and suffix
         try:
             prefix, suffix = where.split('_')
         except ValueError:
-            raise Exception("NO")
+            raise PhoneticsException(u"invalid environment expression: '%s'" % where)
         prefix = self._input_sub(prefix)
         suffix = self._input_sub(suffix)
 
         # apply the rule to the word
         pattern = self.PATTERN.format(prefix, before, suffix)
         pattern = pattern.replace(self.BOUNDARY, r'\b')
-        print pattern
         return re.sub(pattern, lambda m: self._output_sub(m, after), word)
 
 
@@ -110,8 +106,8 @@ class PhoneticsEngine(object):
     def _output_sub(self, match, after):
         """ Substitute expressions in the output with the best match to the
         given segment. """
-        segment = match.group(0)
-        return re.sub(self.EXPRESSION, lambda expr: self._output_expr(match, expr), after)
+        output = re.sub(self.EXPRESSION, lambda expr: self._output_expr(match, expr), after)
+        return re.sub(r'\\(\d+)', lambda group: self._output_group(match, group), output)
 
 
     def _output_expr(self, match, expr):
@@ -125,7 +121,7 @@ class PhoneticsEngine(object):
         best_candidates = []
         best_distance = maxint
         for candidate in candidates:
-            distance = len(self._features[after] ^ self._features[candidate])
+            distance = len(self._features[segment] ^ self._features[candidate])
             if distance < best_distance:
                 best_candidates = [candidate]
                 best_distance = distance
@@ -134,10 +130,16 @@ class PhoneticsEngine(object):
 
         # return candidate if exactly one found else raise an error
         if len(best_candidates) > 1:
-            raise Exception("NO")
+            raise PhoneticsException("multiple candidates for segment '%s': '%s'" % (segment, ','.join(candidates)))
         elif len(best_candidates) == 0:
             raise Exception("NO")
         return best_candidates.pop()
+
+
+    def _output_group(self, match, group):
+        """ Insert segments which were captured in the environment. """
+        return match.group(int(group.group(1)))
+
 
     # definitions of functions for phonetic class expressions
     class Operator(object):
@@ -168,11 +170,10 @@ class PhoneticsEngine(object):
     LEFT_BRACKET = r'\['
     RIGHT_BRACKET = r'\]'
     OPERATOR = _set_regex(*[op.regex for op in OPERATORS.values()])
-    TOKEN_REGEX = _set_regex(CLASS, LEFT_BRACKET, RIGHT_BRACKET, OPERATOR, '{0}', '.')
+    TOKEN_REGEX = _set_regex(CLASS, LEFT_BRACKET, RIGHT_BRACKET, OPERATOR, '.')
 
     def parse(self, expr):
         """ Parse an expression representing a set of segments. """
-
         out = []
         ops = []
 
@@ -205,13 +206,12 @@ class PhoneticsEngine(object):
                 while len(ops) > 0 and isinstance(ops[-1], self.Operator):
                     out.append(ops.pop().token)
                 if len(ops) == 0 or not re.match(self.LEFT_BRACKET, ops[-1]):
-                    print ops
-                    raise ExpressionException("no matching left bracket")
+                    raise PhoneticsException("no matching left bracket")
                 ops.pop()
 
             # raise an error on an invalid token
             else:
-                raise ExpressionException("invalid segment: '%s'" % token)
+                raise PhoneticsException(u"invalid segment: '%s'" % token)
         
         # apply any remaining operators
         while len(ops) > 0:
@@ -267,9 +267,6 @@ class PhoneticsEngine(object):
             raise Exception("NO")
         return out.pop()
 
-
-class ExpressionException(Exception):
-    pass
 
 class PhoneticsException(Exception):
     pass

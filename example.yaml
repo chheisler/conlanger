@@ -82,49 +82,55 @@ states:
 # word changes
 changes:
   -
+    name: stress
+    rules:
+      - "[+vowel]->[+stressed]/_(ː|[+consonant])+#"
+      - "[+vowel]->[+stressed]/_[-vowel]*[+vowel,-stressed][-vowel]*#"
+  -
     name: glide deletion
     rules:
       - "w->/[+labial]_[+vowel]"
-      - "j->/[+consonant]_i"
-      - "w->/[+consonant]_u"
-#  -
-#    name: stop assimilation
-#    rules:
-#      - [{n: m}, null, "[mpb]"]
-#      - [{t: p, d: b}, null, "[pb]"]
-#      - [{n: ŋ, t: k, d: g, q: k}, null, "[kg]"]
-#      - [{n: ɴ, t: q, d: ɢ, k: q, g: ɢ, x: χ}, null, q]
-#  -
-#    name: voice assimilation
-#    steps:
-#    - [{p: b, t: d, k: g}, null, "[bdg]"]
-#    - [{b: p, d: t, g: k}, null, "[ptkqsx]"]
-#  - 
-#    name: vowel lowering
-#    steps:
-#      - [{i: e, ī: ē, u: o, ū: ō}, null, "[ɴqɢχ]"]
+      - "j->/[+consonant]_[+front,+close]"
+      - "w->/[+consonant]_[+back,+close]"
+  -
+    name: stop assimilation
+    rules:
+      - "[+alveolar,+stop]->[+bilabial]/_[+bilabial,+stop]"
+      - "[+alveolar,+stop]->[+velar]/_[+velar,+stop]"
+      - "[+alveolar,+stop]->[+uvular]/_[+uvular,+stop]"
+  -
+    name: voice assimilation
+    rules:
+    - "[+stop,-nasal,-voiced]->[+voiced]/_[+stop,-nasal,+voiced]"
+    - "[+stop,-nasal,+voiced]->[-voiced]/_[+stop,-nasal,-voiced]"
+  -
+    name: gemination
+    rules:
+      - "\\1->ː/([+consonant])_"
+  - 
+    name: vowel lowering
+    rules:
+      - "[+vowel,+close]->[+mid]/_ː?[+uvular]"
 #  -
 #    name: dental assimilation
 #    steps:
 #      - [{tl: ɬ, dl: l}, "[mnptkqbdgsxrl]", "[aiueoāīūēō]"]
-#  -
-#    name: glottalization
-#    steps:
-#      - [{p: h}, "[^m]", null]
-#      - [{q: ʔ}, null, null]
-#  -
-#    name: palatalization
-#    steps:
-#      - [{kk: t͡ʃt͡ʃ, k: t͡ʃ, gg: d͡ʒd͡ʒ, g: d͡ʒ, xx: ʃʃ, x: ʃ}, null, "[ji]"]
-#      - [{j: null}, "[ʃʒ]", null]
+  -
+    name: glottalization
+    rules:
+      - "p->h/[-[m]|#]_"
+      - "q->ʔ/[-[ɴ]|#]_"
+  -
+    name: palatalization
+    rules:
+      - "[+velar]->[+palato-alveolar]/_ː?[+front|j]"
   -
     name: lenition
     rules:
-      - "[+voiced,+stop,-nasal]->[+fricative,-sibilant]/[-stop]_[-stop]"
-#      - [{p: b, t: d, t͡ʃ: d͡ʒ, k: g, ʔ: ɢ, s: z, ʃ: ʒ, x: ɣ, h: ɦ}, "[mnŋɴbdgɢrljwaiueoāīūēō]", "[mnŋɴbdgɢrljwaiueoāīūēō]"]
-#      - [{tt: t, kk: k, ʔʔ: ʔ, ss: s, xx: x}, null, null]
-#      - [{ɢ: ː, ɦ: ː}, "[aiueoāīūēōjw]", "[^aiueoāīūēōjw]"]
-#      - [{ɢ: null, ɦ: null}, "[aiueoāīūēōjw]", "[aiueoāīūēōjw]"]
+      - "[ʔ|h]->/[+voiced]_[+voiced]"
+      - "[+voiced,[+stop|+affricate],-nasal]->[+fricative,-sibilant]/[+sonorant,-stop]_[+sonorant,-stop]"
+      - "[-voiced,+obstruent]->[+voiced]/[+voiced]_[+voiced]"
+      - "ː->/[+obstruent]_"
 #  -
 #    name: vowel shift
 #    steps:
