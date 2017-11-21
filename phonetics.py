@@ -2,7 +2,7 @@ from collections import defaultdict
 import yaml
 import regex as re
 import operator
-
+from sys import maxint
 
 def _set_regex(*args):
     """ Build a regex for a set of segments. """
@@ -59,39 +59,77 @@ class PhoneticsEngine(object):
     BOUNDARY = u'#'
     EXPRESSION = ur'\[(?>[^\[\]]|(?R))*\]'
     PATTERN = ur'{0}\K{1}(?={2})'
-    def app_change(self, word, changes, where):
-        prefix, suffix = self._affixes(where)
-        target = self._target(changes)
-        pattern = self.PATTERN.format(prefix, target, suffix)
+    def sound_change(self, rule, word):
+
+        # split the rule into the change and condition
+        count = rule.count('/')
+        if count == 0:
+            print 'foo'
+            change = rule
+            where = '_'
+        elif count == 1:
+            change, where = rule.split('/')
+        else:
+            print 'bar'
+            raise Exception("NO")
+
+        # split the change into from and to
+        try:
+            before, after = change.split('->')
+        except ValueError:
+            raise Exception("NO")
+        before = self._input_sub(before)
+
+        # get patterns for conditioning prefix and suffix
+        try:
+            prefix, suffix = where.split('_')
+        except ValueError:
+            raise Exception("NO")
+        prefix = self._input_sub(prefix)
+        suffix = self._input_sub(suffix)
+
+        # apply the rule to the word
+        pattern = self.PATTERN.format(prefix, before, suffix)
         pattern = pattern.replace(self.BOUNDARY, r'\b')
-        return re.sub(pattern, lambda match: self._sub(match, changes), word)
+        return re.sub(pattern, lambda m: self._output_sub(m, after), word)
 
 
-    def _affixes(self, where):
-        """ Get patterns for conditioning prefix and suffix. """
-        return tuple(
-             re.sub(self.EXPRESSION, lambda m: self._expr(m), affix)
-             for affix in where.split(self.TARGET)
-        )
+    def _input_sub(self, string):
+        """ Substitute expressions in the input with a set of candidates. """
+        return re.sub(self.EXPRESSION, lambda m: self._input_expr(m), string)
 
 
-    def _expr(self, match):
+    def _input_expr(self, match):
         """ Replace an expression with a regex matching the set of segments. """
         tokens = self.parse(match.group(0))
         segments = self.eval(tokens)
         return _set_regex(*segments)
 
 
-    def _target(self, changes):
-        """ Get the pattern for the segment to be replaced. """
-        segments = changes.keys()
-        segments.sort(key=len, reverse=True)
-        return _set_regex(*segments)
+    def _output_sub(self, match, after):
+        """ Substitute expressions in the output with the best match to the
+        given segment. """
+        segment = match.group(0)
+        tokens = self.parse(after)
+        candidates = self.eval(tokens)
 
+        # find the best candidates from the evaluated candidates
+        best_candidates = []
+        best_distance = maxint
+        for candidate in candidates:
+            distance = len(self._features[segment] ^ self._features[candidate])
+            if distance < best_distance:
+                best_candidates = [candidate]
+                best_distance = distance
+            elif distance == best_distance:
+                best_candidates.append(candidate)
 
-    def _sub(self, match, changes):
-        return changes[match.group(0)]
-
+        # return candidate if exactly one found else raise an error
+        if len(best_candidates) > 1:
+            raise Exception("NO")
+        elif len(best_candidates) == 0:
+            raise Exception("NO")
+        return best_candidates.pop()
 
     # definitions of functions for phonetic class expressions
     class Operator(object):
