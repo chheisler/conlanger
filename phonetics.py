@@ -58,7 +58,7 @@ class PhoneticsEngine(object):
     TARGET = u'_'
     BOUNDARY = u'#'
     EXPRESSION = ur'\[(?>[^\[\]]|(?R))*\]'
-    PATTERN = ur'{0}\K{1}(?={2})'
+    PATTERN = ur'(?<={0}){1}(?={2})'
     def sound_change(self, rule, word):
 
         # split the rule into the change and condition
@@ -91,6 +91,7 @@ class PhoneticsEngine(object):
         # apply the rule to the word
         pattern = self.PATTERN.format(prefix, before, suffix)
         pattern = pattern.replace(self.BOUNDARY, r'\b')
+        print pattern
         return re.sub(pattern, lambda m: self._output_sub(m, after), word)
 
 
@@ -110,14 +111,21 @@ class PhoneticsEngine(object):
         """ Substitute expressions in the output with the best match to the
         given segment. """
         segment = match.group(0)
-        tokens = self.parse(after)
+        return re.sub(self.EXPRESSION, lambda expr: self._output_expr(match, expr), after)
+
+
+    def _output_expr(self, match, expr):
+        """ Evaluate each expression and pick the best candidate from the set
+        of sounds which is closest to the given segment. """
+        segment = match.group(0)
+        tokens = self.parse(expr.group(0))
         candidates = self.eval(tokens)
 
         # find the best candidates from the evaluated candidates
         best_candidates = []
         best_distance = maxint
         for candidate in candidates:
-            distance = len(self._features[segment] ^ self._features[candidate])
+            distance = len(self._features[after] ^ self._features[candidate])
             if distance < best_distance:
                 best_candidates = [candidate]
                 best_distance = distance
@@ -216,9 +224,12 @@ class PhoneticsEngine(object):
     def eval(self, tokens):
         """ Evaluate a set of parsed tokens into a set of segments. """
 
+        # handle special case for an empty string
+        if len(tokens) == 0:
+            return set('')
+
         out = []
         for token in tokens:
-
             # if token is class put appropriate set on stack
             if re.match(self.CLASS, token):
                 try:

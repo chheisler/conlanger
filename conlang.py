@@ -1,6 +1,7 @@
 import yaml
 import random
 import re
+from phonetics import PhoneticsEngine
 
 def weighted_choice(items):
     """ Make a weighted choice from a sequence of item, weight tuples. """
@@ -30,8 +31,6 @@ class WordGenerator(object):
         self._syllables = [tuple(syllable) for syllable in config['syllables']]
         self._machine = StateMachine(config)
         self._changes = config['changes']
-        for change in self._changes:
-            change['steps'] = [normalize(step) for step in change['steps']]
 
     def generate_word(self, num_syllables=None):
         print
@@ -57,13 +56,10 @@ class WordGenerator(object):
             word = self.apply_change(word, change)
 
     def apply_change(self, word, change):
-        for d, before, after in change['steps']:
-            keys = [re.escape(key) for key in d]
-            keys.sort(key=len, reverse=True)
-            target = u'(?:{0})'.format('|'.join(keys))
-            pattern = u'(?<={0}){1}(?={2})'.format(before, target, after)
-            word = re.sub(pattern, lambda match: d[match.group(0)], word, re.UNICODE)
-        print(u'{0}: {1}'.format(change['name'], word))
+        phonetics = PhoneticsEngine('phonetics.yaml')
+        for rule in change['rules']:
+            word = phonetics.sound_change(rule, word)
+        print '{0}: {1}'.format(change['name'], word)
         return word
 
 class StateMachine(object):
