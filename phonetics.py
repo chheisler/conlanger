@@ -45,6 +45,15 @@ class PhoneticsEngine(object):
             else:
                 raise Exception("NO")
 
+        # retrieve any modifying characters and prepare regex
+        if 'modifiers' in config:
+            self._modifiers = set(config['modifiers'].values())
+        else:
+            self._modifiers = set()
+        self._modifiers_regex = _set_regex(*self._modifiers)
+        self._before_regex = ur'(?P<segment>%s)(?P<modifiers>{0}*)'.format(self._modifiers_regex)
+        self._affix_regex = ur'%s{0}*'.format(self._modifiers_regex)
+
         # set the regex for segment tokens
         self._segment_regex = _set_regex(self.BOUNDARY, *self._all)
         self._token_regex = re.compile(self.TOKEN_REGEX.format(self._segment_regex))
@@ -75,32 +84,33 @@ class PhoneticsEngine(object):
             before, after = change.split('->')
         except ValueError:
             raise PhoneticsException(u"invalid change expression: '%s'" % change)
-        before = self._input_sub(before)
+        before = self._input_sub(before, self._before_regex)
 
         # get patterns for conditioning prefix and suffix
         try:
             prefix, suffix = where.split('_')
         except ValueError:
             raise PhoneticsException(u"invalid environment expression: '%s'" % where)
-        prefix = self._input_sub(prefix)
-        suffix = self._input_sub(suffix)
+        prefix = self._input_sub(prefix, self._affix_regex)
+        suffix = self._input_sub(suffix, self._affix_regex)
 
         # apply the rule to the word
         pattern = self.PATTERN.format(prefix, before, suffix)
         pattern = pattern.replace(self.BOUNDARY, r'\b')
+        print pattern
         return re.sub(pattern, lambda m: self._output_sub(m, after), word)
 
 
-    def _input_sub(self, string):
+    def _input_sub(self, string, base):
         """ Substitute expressions in the input with a set of candidates. """
-        return re.sub(self.EXPRESSION, lambda m: self._input_expr(m), string)
+        return re.sub(self.EXPRESSION, lambda m: self._input_expr(m, base), string)
 
 
-    def _input_expr(self, match):
+    def _input_expr(self, match, base):
         """ Replace an expression with a regex matching the set of segments. """
         tokens = self.parse(match.group(0))
         segments = self.eval(tokens)
-        return _set_regex(*segments)
+        return base  % _set_regex(*segments)
 
 
     def _output_sub(self, match, after):
@@ -113,7 +123,7 @@ class PhoneticsEngine(object):
     def _output_expr(self, match, expr):
         """ Evaluate each expression and pick the best candidate from the set
         of sounds which is closest to the given segment. """
-        segment = match.group(0)
+        segment = match.group('segment')
         tokens = self.parse(expr.group(0))
         candidates = self.eval(tokens)
 
@@ -133,7 +143,7 @@ class PhoneticsEngine(object):
             raise PhoneticsException("multiple candidates for segment '%s': '%s'" % (segment, ','.join(candidates)))
         elif len(best_candidates) == 0:
             raise Exception("NO")
-        return best_candidates.pop()
+        return best_candidates.pop() + match.group('modifiers')
 
 
     def _output_group(self, match, group):

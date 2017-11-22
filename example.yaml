@@ -81,11 +81,11 @@ states:
 
 # word changes
 changes:
-  -
-    name: stress
-    rules:
-      - "[+vowel]->[+stressed]/_(ː|[+consonant])+#"
-      - "[+vowel]->[+stressed]/_[-vowel]*[+vowel,-stressed][-vowel]*#"
+#  -
+#    name: stress
+#    rules:
+#      - "[+vowel]->[+stressed]/_[+consonant]+"
+#      - "[+vowel]->[+stressed]/_[-vowel]*[+vowel,-stressed][-vowel]*#"
   -
     name: glide deletion
     rules:
@@ -110,7 +110,7 @@ changes:
   - 
     name: vowel lowering
     rules:
-      - "[+vowel,+close]->[+mid]/_ː?[+uvular]"
+      - "[+vowel,+close]->[+mid]/_[+uvular]"
 #  -
 #    name: dental assimilation
 #    steps:
@@ -123,14 +123,14 @@ changes:
   -
     name: palatalization
     rules:
-      - "[+velar]->[+palato-alveolar]/_ː?[+front|j]"
+      - "[+velar]->[+palato-alveolar]/_[+front|j]"
   -
     name: lenition
     rules:
       - "[ʔ|h]->/[+voiced]_[+voiced]"
       - "[+voiced,[+stop|+affricate],-nasal]->[+fricative,-sibilant]/[+sonorant,-stop]_[+sonorant,-stop]"
       - "[-voiced,+obstruent]->[+voiced]/[+voiced]_[+voiced]"
-      - "ː->/[+obstruent]_"
+#      - "ː->/[+obstruent]_"
 #  -
 #    name: vowel shift
 #    steps:

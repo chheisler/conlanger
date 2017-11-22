@@ -22,14 +22,15 @@ segments:
     sibilant: [t͡ʃ, d͡ʒ, s, z, ʃ, ʒ]
     obstruent: [p, t, k, q, b, d, g, ɢ, t͡ʃ, d͡ʒ, f, θ, s, ʃ, x, χ, h, v, ð, z, ʒ, ɣ, ʁ]
   vowel:
-    front: [i, í, e, é]
-    back: [u, ú, o, ó]
-    central: [a, á]
-    close: [i, í, u, ú]
-    mid: [e, é, o, ó]
-    open: [a, á]
-    unrounded: [a, á, i, í, e, é]
-    rounded: [u, ú, o, ó]
-    stressed: [í, ú, é, ó, á]
-  voiced: [m, n, ŋ, ɴ, b, d, g, ɢ, d͡ʒ, v, ð, z, ʒ, ɣ, ʁ, r, l, j, w, i, í, u, ú, e, é, o, ó, a, á]
-  sonorant: [m, n, ŋ, ɴ, r, l, j, w, i, í, u, ú, e, é, o, ó, a, á]
+    front: [i, e]
+    back: [u, o]
+    central: [a]
+    close: [i, u]
+    mid: [e, o]
+    open: [a]
+    round: [u, o]
+  voiced: [m, n, ŋ, ɴ, b, d, g, ɢ, d͡ʒ, v, ð, z, ʒ, ɣ, ʁ, r, l, j, w, i, u, e, o, a]
+  sonorant: [m, n, ŋ, ɴ, r, l, j, w, i, u, e, o, a]
+modifiers:
+  long: ː
+  stress: ́
